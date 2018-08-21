@@ -71,41 +71,41 @@ function checkAllServers {
     foreach ($item in $ServersToCheck) {
         "Server:" + $item
         try {
-            Write-Log $item
-            $disks = Get-WmiObject Win32_LogicalDisk -ComputerName $item
-        }
-        catch {
-            $ErrorMessage = $_.Exception.Message
-            Write-Log $ErrorMessage
-        }
-        foreach ($disk in $disks) {
-            #$disk.deviceID
-            if ($disk.size -gt 0) {
-                "Disk: " + $disk.DeviceID + " " + $disk.VolumeName
-                "Size: " + $disk.Size / 1024 / 1024 + "MB"
-                "Free Space: " + $disk.FreeSpace / 1024 / 1024 + "MB"
-                $PercFreeSpace = ($disk.FreeSpace / $disk.Size) * 100
-                if ($PercFreeSpace -gt 20) {
-                    write-host "Percentage Free Space: "$PercFreeSpace"%" -ForegroundColor Green
-                }
-                elseif ($PercFreeSpace -gt 10 -and $PercFreeSpace -lt 20) {
-                    Write-host "Percentage Free Space: "$PercFreeSpace"%" -ForegroundColor Yellow
-                }
-                elseif ($PercFreeSpace -lt 10) {
-                    write-host "!!!!!!!!!!!!!!!" -ForegroundColor Red
-                    Write-host "Percentage Free Space: "$PercFreeSpace"%" -ForegroundColor Red
-                    write-host "!!!!!!!!!!!!!!!" -ForegroundColor Red
-                }
-                    $fouten += New-Object PSCustomObject -Property @{
-                    Server          = $item
-                    Drive           = $disk.DeviceID
-                    Name            = $disk.VolumeName
-                    Free_Space_GB   = $disk.FreeSpace / 1024 / 1024 / 1024
-                    Perc_Free_Space = $PercFreeSpace
+            $disks = Get-WmiObject Win32_LogicalDisk -ComputerName $item -ErrorAction Stop
+            foreach ($disk in $disks) {
+                #$disk.deviceID
+                if ($disk.size -gt 0) {
+                    "Disk: " + $disk.DeviceID + " " + $disk.VolumeName
+                    "Size: " + $disk.Size / 1024 / 1024 + "MB"
+                    "Free Space: " + $disk.FreeSpace / 1024 / 1024 + "MB"
+                    $PercFreeSpace = ($disk.FreeSpace / $disk.Size) * 100
+                    if ($PercFreeSpace -gt 20) {
+                        write-host "Percentage Free Space: "$PercFreeSpace"%" -ForegroundColor Green
                     }
-                ""
+                    elseif ($PercFreeSpace -gt 10 -and $PercFreeSpace -lt 20) {
+                        Write-host "Percentage Free Space: "$PercFreeSpace"%" -ForegroundColor Yellow
+                    }
+                    elseif ($PercFreeSpace -lt 10) {
+                        write-host "!!!!!!!!!!!!!!!" -ForegroundColor Red
+                        Write-host "Percentage Free Space: "$PercFreeSpace"%" -ForegroundColor Red
+                        write-host "!!!!!!!!!!!!!!!" -ForegroundColor Red
+                    }
+                    $fouten += New-Object PSCustomObject -Property @{
+                        Server          = $item
+                        Drive           = $disk.DeviceID
+                        Name            = $disk.VolumeName
+                        Free_Space_GB   = $disk.FreeSpace / 1024 / 1024 / 1024
+                        Perc_Free_Space = $PercFreeSpace
+                    }
+                    ""
+                }
             }
         }
+        catch {
+            $ErrorMessage = $item +  $Error[0].Exception
+            Write-Log $ErrorMessage
+        }
+
 
         "----------------------------"
 

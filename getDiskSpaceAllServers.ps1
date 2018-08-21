@@ -102,7 +102,7 @@ function checkAllServers {
             }
         }
         catch {
-            $ErrorMessage = $item +  $Error[0].Exception
+            $ErrorMessage = "Server: $item has error  $($Error[0].Exception)"
             Write-Log $ErrorMessage
         }
 

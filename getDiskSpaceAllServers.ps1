@@ -69,11 +69,9 @@ function checkAllServers {
 
     $fouten = @()
     foreach ($item in $ServersToCheck) {
-        "Server:" + $item
         try {
             $disks = Get-WmiObject Win32_LogicalDisk -ComputerName $item -ErrorAction Stop
             foreach ($disk in $disks) {
-                #$disk.deviceID
                 if ($disk.size -gt 0) {
                     "Disk: " + $disk.DeviceID + " " + $disk.VolumeName
                     "Size: " + $disk.Size / 1024 / 1024 + "MB"
@@ -89,13 +87,14 @@ function checkAllServers {
                         write-host "!!!!!!!!!!!!!!!" -ForegroundColor Red
                         Write-host "Percentage Free Space: "$PercFreeSpace"%" -ForegroundColor Red
                         write-host "!!!!!!!!!!!!!!!" -ForegroundColor Red
-                    }
-                    $fouten += New-Object PSCustomObject -Property @{
-                        Server          = $item
-                        Drive           = $disk.DeviceID
-                        Name            = $disk.VolumeName
-                        Free_Space_GB   = $disk.FreeSpace / 1024 / 1024 / 1024
-                        Perc_Free_Space = $PercFreeSpace
+
+                        $fouten += New-Object PSCustomObject -Property @{
+                            Server          = $item
+                            Drive           = $disk.DeviceID
+                            Name            = $disk.VolumeName
+                            Free_Space_GB   = $disk.FreeSpace / 1024 / 1024 / 1024
+                            Perc_Free_Space = $PercFreeSpace
+                        }
                     }
                     ""
                 }
@@ -110,7 +109,7 @@ function checkAllServers {
         "----------------------------"
 
     }
-    $fouten | Select-Object Server, Drive, Name, Free_Space_GB, Perc_Free_Space | Out-GridView -Title "Disk space of BekaertDeslee Server (< 10% available)" -Wait
+    $fouten | Select-Object Server, Drive, Name, Free_Space_GB, Perc_Free_Space | Out-GridView -Title "Disk space of BekaertDeslee Server (< 10% available)"
 }
 #endregion
 

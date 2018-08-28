@@ -198,8 +198,8 @@ try {
 
     #Delete all log files older than x days (specified in $MaxAgelogFiles variable)
     try {
-        #$limit = (Get-Date).AddDays(-$MaxAgeLogFiles)
-        #Get-ChildItem -Path $logPath.substring(0, $logpath.LastIndexOf("\")) -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } | Remove-Item -Force
+        $limit = (Get-Date).AddDays(-$MaxAgeLogFiles)
+        Get-ChildItem -Path $logPath.substring(0, $logpath.LastIndexOf("\")) -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } | Remove-Item -Force
     }
     catch {
         $ErrorMessage = $_.Exception.Message

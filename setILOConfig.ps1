@@ -76,9 +76,9 @@ $alertmail = $false
 $MaxAgeLogFiles = 30
 $iLODHCPIP = 'Enter the DHCP IP Address issued to the new iLO'
 $iloUserName = 'Username'
-$DefaultiLOPassword = 'Enter default iLO password.  Found on label on server'
+$iLOPassword = 'Enter new iLO password'
 $iLOLicenseKey = 'Enter the iLO Advanced License key'
-$cred = Get-Credential -UserName admin -Message "Enter current standard iLO password"
+$cred = Get-Credential -UserName Administrator -Message "Enter current standard iLO password"
 $iLOIPAddress = 'Enter fixed IP for the iLO'
 $iLOGateway = 'Enter the Default Gateway'
 $iLOPrimaryDNS = 'Enter Primary DNS IP'
@@ -126,12 +126,12 @@ try {
     #connect to ILO environment
     Write-Host 'Connecting to iLO'
     Write-Log 'Connecting to iLO'
-    $ConnectionDHCP = Connect-HPEiLO -IP $iLODHCPIP -Username Administrator -Password $DefaultiLOPassword -DisableCertificateAuthentication -WarningAction SilentlyContinue
+    $ConnectionDHCP = Connect-HPEiLO -IP $iLODHCPIP -Credential $cred -DisableCertificateAuthentication -WarningAction SilentlyContinue
     if (Test-HPEiLOConnection -Connection $ConnectionDHCP) {
         # Add the standard admin account with the network password
         Write-Log 'Adding standard admin user account'
         Write-Host 'Adding standard admin user account'
-        Add-HPEiLOUser -Connection $ConnectionDHCP -Username $iloUserName -Password $cred -ConfigiLOPriv Yes -LoginPrivilege Yes -UserConfigPrivilege Yes -HostBIOSConfigPrivilege Yes -HostNICConfigPrivilege Yes -HostStorageConfigPrivilege -SystemRecoveryConfigPrivilege -RemoteConsolePrivilege Yes -VirtualMediaPrivilege Yes -VirtualPowerAndResetPrivilege Yes -ErrorAction Stop
+        Add-HPEiLOUser -Connection $ConnectionDHCP -Username $iloUserName -Password $iLOPassword -ConfigiLOPriv Yes -LoginPrivilege Yes -UserConfigPrivilege Yes -HostBIOSConfigPrivilege Yes -HostNICConfigPrivilege Yes -HostStorageConfigPrivilege -SystemRecoveryConfigPrivilege -RemoteConsolePrivilege Yes -VirtualMediaPrivilege Yes -VirtualPowerAndResetPrivilege Yes -ErrorAction Stop
 
         if ($UpdateILO) {
             $iloUpdateFile = Get-FileName "C:\"
@@ -190,6 +190,7 @@ catch {
     Write-Log $ErrorMessage
 }
 finally {
+        Disconnect-HPEiLO -Connection $ConnectionStatic
 }
 
 Write-Log "[INFO] - Stopping script"

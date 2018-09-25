@@ -82,7 +82,6 @@ $iLOSubnet = 'Enter ILO subnet mask'
 $iLODNSName = 'Enter iLO Hostname'
 $iloDomainName = 'Enter domain name'
 $esxIso = Get-FileName "C:\"
-#$iLOFirmwareFile = 'Path to downloaded firmware'
 #endregion
 
 #region Log file creation
@@ -116,47 +115,51 @@ catch {
 #region Operational Script
 Write-Log "[INFO] - Starting script"
 try {
+    #Enable advanced logging - Default location C:\Program Files (x86)\Hewlett Packard Enterprise\PowerShell\Modules\HPEiLOCmdlets
     Enable-HPEiLOLog
     #connect to ILO environment
+    Write-Host 'Connecting to iLO'
+    Write-Log 'Connecting to iLO'
     $ConnectionDHCP = Connect-HPEiLO -IP $iLODHCPIP -Username Administrator -Password $DefaultiLOPassword -DisableCertificateAuthentication -WarningAction SilentlyContinue
     if (Test-HPEiLOConnection -Connection $ConnectionDHCP) {
         # Add the standard admin account with the network password
         Write-Log 'Adding standard admin user account'
-        Add-HPEiLOUser -Connection $ConnectionDHCP -Username $iloUserName -Password $cred -ConfigiLOPriv Yes -LoginPrivilege Yes -UserConfigPrivilege Yes -HostBIOSConfigPrivilege Yes -HostNICConfigPrivilege Yes -HostStorageConfigPrivilege -SystemRecoveryConfigPrivilege -RemoteConsolePrivilege Yes -VirtualMediaPrivilege Yes -VirtualPowerAndResetPrivilege Yes
-
-        # Remove the built in default Administrator account
-        #Commented out, because we want to keep the default user present
-        #Remove-HPEiLOUser -Connection $Connection -LoginName 'Administrator'
-
-        # Update the iLO firmware
-        #Write-Host "Applying the latest iLO Firmware.  This could take a minute"
-        #Update-HPEiLOFirmware -Connection $Connection -Location $iLOFirmwareFile
-        #Start-Sleep -s 60
+        Write-Host 'Adding standard admin user account'
+        Add-HPEiLOUser -Connection $ConnectionDHCP -Username $iloUserName -Password $cred -ConfigiLOPriv Yes -LoginPrivilege Yes -UserConfigPrivilege Yes -HostBIOSConfigPrivilege Yes -HostNICConfigPrivilege Yes -HostStorageConfigPrivilege -SystemRecoveryConfigPrivilege -RemoteConsolePrivilege Yes -VirtualMediaPrivilege Yes -VirtualPowerAndResetPrivilege Yes -ErrorAction Stop
 
         # Add the iLO license key
+        Write-Host "Adding the iLO Advanced License"
         Write-Log "Adding the iLO Advanced License"
-        Set-HPEiLOLicense -Connection $ConnectionDHCP -Key $iLOLicenseKey
+        Set-HPEiLOLicense -Connection $ConnectionDHCP -Key $iLOLicenseKey -ErrorAction SilentlyContinue
 
         # Setup iLO networking
-        Write-Log "Setting up network on $iLODNSName"
+        Write-Host "Setting up network on $iLODNSName"
+        Write-Host "Setting up network on $iLODNSName"
         Set-HPEiLOIPv6NetworkSetting -Connection $ConnectionDHCP -DHCPv6DNSServer No
-        Set-HPEiLOIPv4NetworkSetting -Connection $ConnectionDHCP -InterfaceType Dedicated -DHCPEnabled No -DNSName $iLODNSName -DNSServer $iLOPrimaryDNS -DomainName $iloDomainName -IPv4Address $iLOIPAddress -IPv4Gateway $iLOGateway -IPv4SubnetMask $iLOSubnet
+        Set-HPEiLOIPv4NetworkSetting -Connection $ConnectionDHCP -InterfaceType Dedicated -DHCPEnabled No -DNSName $iLODNSName -DNSServer $iLOPrimaryDNS -DomainName $iloDomainName -IPv4Address $iLOIPAddress -IPv4Gateway $iLOGateway -IPv4SubnetMask $iLOSubnet -ErrorAction Stop
         Start-Sleep -s 30
         Write-Host 'Pausing for 30 seconds for iLO reset with new IP'
+        Write-Log 'Pausing for 30 seconds for iLO reset with new IP'
 
         #create new connection string to connect with new ipaddress
         $ConnectionStatic = Connect-HPEiLO -IP $iLOIPAddress -Username Administrator -Password $DefaultiLOPassword -DisableCertificateAuthentication -WarningAction SilentlyContinue
         if (Test-HPEiLOConnection -Connection $ConnectionStatic) {
             # Setup Power options
             Write-Host "Configuring power options"
-            Set-HPEiLOServerPowerRestoreSetting -Connection $ConnectionStatic -AutoPower Yes -PowerOnDelay RandomUpTo120Sec
-            Set-HPEiLOPowerRegulatorSetting -Connection $ConnectionStatic -Mode Max
+            Write-Log "Configuring power options"
+            Set-HPEiLOServerPowerRestoreSetting -Connection $ConnectionStatic -AutoPower Yes -PowerOnDelay RandomUpTo120Sec -ErrorAction SilentlyContinue
+            Set-HPEiLOPowerRegulatorSetting -Connection $ConnectionStatic -Mode Max -ErrorAction SilentlyContinue
 
             # Restart iLO
             Write-Host "Configuration complete.  Restarting iLO $iLODNSName"
-            Reset-HPEiLO -Connection $ConnectionStatic -Device iLO
+            Write-Log "Configuration complete.  Restarting iLO $iLODNSName"
+            Reset-HPEiLO -Connection $ConnectionStatic -Device iLO -ErrorAction SilentlyContinue
 
-            Mount-HPEiLOVirtualMedia -Connection $ConnectionStatic -Device CD -ImageURL $esxIso
+            #ESXi iso mounten + bootvolgorde aanpassen naar CD
+            Write-Host "Mounting ESXi ISO"
+            Write-Log "Mounting ESXi ISO"
+            Mount-HPEiLOVirtualMedia -Connection $ConnectionStatic -Device CD -ImageURL $esxIso -ErrorAction SilentlyContinue
+            Set-HPEiLOOneTimeBootOption -BootSourceOverrideEnable Yes -BootSourceOverrideTarget CD
         }
     }
 }

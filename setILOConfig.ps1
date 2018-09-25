@@ -5,6 +5,7 @@
 .DESCRIPTION
     This script will set basic settings for HPe iLO. This includes IPv4, new user, licensing and power settings.
     If there are any problems with the script, please contact Orbid Servicedesk (servicedesk@orbid.be or + 32 9 272 99 00)
+    Installation of the HPe iLO cmdlets is required. Download via https://support.hpe.com/hpsc/swd/public/detail?sp4ts.oid=1008862655&swItemId=MTX_f17990338eff4e5c894cdb8e67&swEnvOid=4184
 
     This scripts creates a log file each time the script is executed.
     It deletes all the logs it created that are older than 30 days. This value is defined in the MaxAgeLogFiles variable.
@@ -69,6 +70,9 @@ function Get-FileName($initialDirectory) {
 #endregion
 
 #region variables
+$UpdateILO = $false
+$installESX = $false
+$alertmail = $false
 $MaxAgeLogFiles = 30
 $iLODHCPIP = 'Enter the DHCP IP Address issued to the new iLO'
 $iloUserName = 'Username'
@@ -81,7 +85,9 @@ $iLOPrimaryDNS = 'Enter Primary DNS IP'
 $iLOSubnet = 'Enter ILO subnet mask'
 $iLODNSName = 'Enter iLO Hostname'
 $iloDomainName = 'Enter domain name'
-$esxIso = Get-FileName "C:\"
+$alertEmailAddress = 'Enter email address'
+$alertEmailDomain = 'Enter email domain'
+$alertSMTPServer = 'Enter the ip off the SMTP server'
 #endregion
 
 #region Log file creation
@@ -127,6 +133,11 @@ try {
         Write-Host 'Adding standard admin user account'
         Add-HPEiLOUser -Connection $ConnectionDHCP -Username $iloUserName -Password $cred -ConfigiLOPriv Yes -LoginPrivilege Yes -UserConfigPrivilege Yes -HostBIOSConfigPrivilege Yes -HostNICConfigPrivilege Yes -HostStorageConfigPrivilege -SystemRecoveryConfigPrivilege -RemoteConsolePrivilege Yes -VirtualMediaPrivilege Yes -VirtualPowerAndResetPrivilege Yes -ErrorAction Stop
 
+        if ($UpdateILO) {
+            $iloUpdateFile = Get-FileName "C:\"
+            Update-HPEiLOFirmware -Connection $ConnectionDHCP -Location $iloUpdateFile -Confirm $true -ErrorAction Stop
+        }
+
         # Add the iLO license key
         Write-Host "Adding the iLO Advanced License"
         Write-Log "Adding the iLO Advanced License"
@@ -150,16 +161,27 @@ try {
             Set-HPEiLOServerPowerRestoreSetting -Connection $ConnectionStatic -AutoPower Yes -PowerOnDelay RandomUpTo120Sec -ErrorAction SilentlyContinue
             Set-HPEiLOPowerRegulatorSetting -Connection $ConnectionStatic -Mode Max -ErrorAction SilentlyContinue
 
+            if ($alertmail) {
+                # Setup Alertmail
+                Write-Host "Configuring email alerts"
+                Set-HPiLOGlobalSetting -Credential $cred -Server $iLODNSName -AlertMail Yes -AlertMailEmail 'Email address' -AlertMailSenderDomain 'email domain' -AlertMailSMTPPort 25 -AlertMailSMTPServer 'SMTP Relay'
+                Set-HPEiLOAlertMailSetting -Connection $ConnectionStatic -AlertMailEnabled Yes -AlertMailEmail $alertEmailAddress -AlertMailSenderDomain $alertEmailDomain -AlertMailSMTPServer $alertSMTPServer
+            }
+
             # Restart iLO
             Write-Host "Configuration complete.  Restarting iLO $iLODNSName"
             Write-Log "Configuration complete.  Restarting iLO $iLODNSName"
             Reset-HPEiLO -Connection $ConnectionStatic -Device iLO -ErrorAction SilentlyContinue
 
-            #ESXi iso mounten + bootvolgorde aanpassen naar CD
-            Write-Host "Mounting ESXi ISO"
-            Write-Log "Mounting ESXi ISO"
-            Mount-HPEiLOVirtualMedia -Connection $ConnectionStatic -Device CD -ImageURL $esxIso -ErrorAction SilentlyContinue
-            Set-HPEiLOOneTimeBootOption -BootSourceOverrideEnable Yes -BootSourceOverrideTarget CD
+            if ($installESX) {
+                #ESXi iso mounten + bootvolgorde aanpassen naar CD
+                #ophalen van de locatie van de ESXi ISO
+                $esxIso = Get-FileName "C:\"
+                Write-Host "Mounting ESXi ISO"
+                Write-Log "Mounting ESXi ISO"
+                Mount-HPEiLOVirtualMedia -Connection $ConnectionStatic -Device CD -ImageURL $esxIso -ErrorAction SilentlyContinue
+                Set-HPEiLOOneTimeBootOption -BootSourceOverrideEnable Yes -BootSourceOverrideTarget CD
+            }
         }
     }
 }

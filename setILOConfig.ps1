@@ -82,6 +82,7 @@ $cred = Get-Credential -UserName Administrator -Message "Enter current standard 
 $iLOIPAddress = 'Enter fixed IP for the iLO'
 $iLOGateway = 'Enter the Default Gateway'
 $iLOPrimaryDNS = 'Enter Primary DNS IP'
+$iLOdnstype = "Primary"
 $iLOSubnet = 'Enter ILO subnet mask'
 $iLODNSName = 'Enter iLO Hostname'
 $iloDomainName = 'Enter domain name'
@@ -145,9 +146,9 @@ try {
 
         # Setup iLO networking
         Write-Host "Setting up network on $iLODNSName"
-        Write-Host "Setting up network on $iLODNSName"
+        Write-Log "Setting up network on $iLODNSName"
         Set-HPEiLOIPv6NetworkSetting -Connection $ConnectionDHCP -DHCPv6DNSServer No
-        Set-HPEiLOIPv4NetworkSetting -Connection $ConnectionDHCP -InterfaceType Dedicated -DHCPEnabled No -DNSName $iLODNSName -DNSServer $iLOPrimaryDNS -DomainName $iloDomainName -IPv4Address $iLOIPAddress -IPv4Gateway $iLOGateway -IPv4SubnetMask $iLOSubnet -ErrorAction Stop
+        Set-HPEiLOIPv4NetworkSetting -Connection $connectionDHCP -InterfaceType Dedicated -DHCPEnabled No -IPv4Address $iLOIPAddress -IPv4Gateway $iLOGateway -IPv4SubnetMask $iLOSubnet -DNSName $iLODNSName -DomainName $iloDomainName -DNSServerType $iLOdnstype -DNSServer $iLOPrimaryDNS -ErrorAction Stop
         Start-Sleep -s 30
         Write-Host 'Pausing for 30 seconds for iLO reset with new IP'
         Write-Log 'Pausing for 30 seconds for iLO reset with new IP'
@@ -168,11 +169,6 @@ try {
                 Set-HPEiLOAlertMailSetting -Connection $ConnectionStatic -AlertMailEnabled Yes -AlertMailEmail $alertEmailAddress -AlertMailSenderDomain $alertEmailDomain -AlertMailSMTPServer $alertSMTPServer
             }
 
-            # Restart iLO
-            Write-Host "Configuration complete.  Restarting iLO $iLODNSName"
-            Write-Log "Configuration complete.  Restarting iLO $iLODNSName"
-            Reset-HPEiLO -Connection $ConnectionStatic -Device iLO -ErrorAction SilentlyContinue
-
             if ($installESX) {
                 #ESXi iso mounten + bootvolgorde aanpassen naar CD
                 #ophalen van de locatie van de ESXi ISO
@@ -181,7 +177,18 @@ try {
                 Write-Log "Mounting ESXi ISO"
                 Mount-HPEiLOVirtualMedia -Connection $ConnectionStatic -Device CD -ImageURL $esxIso -ErrorAction SilentlyContinue
                 Set-HPEiLOOneTimeBootOption -BootSourceOverrideEnable Yes -BootSourceOverrideTarget CD
+                Write-Host "Configuration complete.  Restarting iLO $iLODNSName"
+                Write-Log "Configuration complete.  Restarting iLO $iLODNSName"
+                Reset-HPEiLO -Connection $ConnectionStatic -Device Both -ErrorAction SilentlyContinue
+
             }
+            else {
+                # Restart iLO
+                Write-Host "Configuration complete.  Restarting iLO $iLODNSName"
+                Write-Log "Configuration complete.  Restarting iLO $iLODNSName"
+                Reset-HPEiLO -Connection $ConnectionStatic -Device iLO -ErrorAction SilentlyContinue
+            }
+
         }
     }
 }

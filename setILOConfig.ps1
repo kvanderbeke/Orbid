@@ -89,6 +89,8 @@ $iloDomainName = 'Enter domain name'
 $alertEmailAddress = 'Enter email address'
 $alertEmailDomain = 'Enter email domain'
 $alertSMTPServer = 'Enter the ip off the SMTP server'
+$HPePassportID = 'Enter HPe Passport id'
+$HPePassportPass = 'Enter HPe Passport Password'
 #endregion
 
 #region Log file creation
@@ -161,6 +163,10 @@ try {
             Write-Log "Configuring power options"
             Set-HPEiLOServerPowerRestoreSetting -Connection $ConnectionStatic -AutoPower Yes -PowerOnDelay RandomUpTo120Sec -ErrorAction SilentlyContinue
             Set-HPEiLOPowerRegulatorSetting -Connection $ConnectionStatic -Mode Max -ErrorAction SilentlyContinue
+
+            Write-Host "Registering server to HPe Support"
+            Write-Log "Registering server to HPe Support"
+            Register-HPEiLORemoteSupportSetting -InterfaceType DirectConnect -HPEPassportUserID $HPePassportID -HPEPassportPassword $HPePassportPass -WebProxyServer 1.1.1.1 -WebProxyPort 2233 -WebProxyUsername admin1 -WebProxyPassword admin123
 
             if ($alertmail) {
                 # Setup Alertmail

@@ -194,7 +194,6 @@ try {
                 Write-Log "Configuration complete.  Restarting iLO $iLODNSName"
                 Reset-HPEiLO -Connection $ConnectionStatic -Device iLO -ErrorAction SilentlyContinue
             }
-
         }
     }
 }
